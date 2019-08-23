@@ -7,7 +7,7 @@ Often in Kubernetes cluster developers deploy CronJobs and forgets that. To kepp
 
 This small utility program provides the CronJob listing along with the schedules in a HTML page.
 
-By default, the cronjobs are listed within the current namespace. To get the cluster wide list, pass "POD_NAMESPACE" empty string in env variable. Also pass the go-html-template path in "TMPL_FILE_PATH" variable.
+By default, the cronjobs are listed within the current namespace. To get the cluster wide list, pass `POD_NAMESPACE` empty string in env variable. Also pass the go-html-template path in `TMPL_FILE_PATH` variable.
 
 Values passed to the html template will construct a page as shown below.
 ![](page.png)
