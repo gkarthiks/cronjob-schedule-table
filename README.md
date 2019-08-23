@@ -12,4 +12,6 @@ By default, the cronjobs are listed within the current namespace. To get the clu
 Values passed to the html template will construct a page as shown below.
 ![](page.png)
 
+The page pops-up with the link for the schedule to [Crontab Guru](https://crontab.guru) with the exact schedule for easier understanding.
+
 A helm-chart for this is available [here](https://hub.helm.sh/charts/gkarthiks/cron-schedules).
