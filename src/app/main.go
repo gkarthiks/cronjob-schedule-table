@@ -1,11 +1,12 @@
 package main
 
 import (
-	discovery "github.com/gkarthiks/k8s-discovery"
 	"go-cron-schedules/src/types"
 	"html/template"
 	"net/http"
 	"os"
+
+	discovery "github.com/gkarthiks/k8s-discovery"
 
 	"strings"
 
@@ -14,35 +15,39 @@ import (
 )
 
 var (
-	k8s *discovery.K8s
-	namespace, temlateFilePath string
-	avail                      bool
-	err                        error
+	k8s                               *discovery.K8s
+	namespace, scope, templateFilePath string
+	avail, scopeAvail                 bool
+	err                               error
 )
-
 
 func init() {
 	log.SetFormatter(&log.JSONFormatter{TimestampFormat: "2006-01-02 15:04:05"})
 
-	temlateFilePath, avail = os.LookupEnv("TMPL_FILE_PATH")
+	scope, scopeAvail = os.LookupEnv("SCOPE")
+	if !scopeAvail {
+		log.Infof("The listing will be on the namespace scope.")
+	} else {
+		log.Infof("The listing will be on the cluster scope.")
+	}
+
+	templateFilePath, avail = os.LookupEnv("TMPL_FILE_PATH")
 	if !avail {
 		log.Panicf("Template file is not available to serve")
 	}
-
-	log.Infof("Program running with version v0.1.3")
 
 }
 
 func main() {
 	k8s, _ := discovery.NewK8s()
-
-	namespace, err = k8s.GetNamespace()
-	if err != nil {
-		log.Fatalf("Couldn't get the namespace")
+	if !scopeAvail {
+		namespace, err = k8s.GetNamespace()
+		if err != nil {
+			log.Fatalf("Couldn't get the namespace")
+		}
 	}
 
-
-	tmpl := template.Must(template.ParseFiles(temlateFilePath))
+	tmpl := template.Must(template.ParseFiles(templateFilePath))
 	http.HandleFunc("/schedule", func(w http.ResponseWriter, r *http.Request) {
 		log.Infof("Request URL %s ", r.URL)
 		dataToServe := getCronJobsInTypesOnDemand(k8s)
@@ -62,7 +67,7 @@ func getCronTabLinked(schedule string) string {
 }
 
 func getCronJobsInTypesOnDemand(k8s *discovery.K8s) interface{} {
-	log.Infof("Collecting the cronJob list on %s namespace on demand", namespace)
+	log.Infof("Collecting the cronJob list on %s namespace on demand", getScope(namespace))
 	cronJobs, err := k8s.Clientset.BatchV1beta1().CronJobs(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		log.Panic(err.Error())
@@ -74,13 +79,21 @@ func getCronJobsInTypesOnDemand(k8s *discovery.K8s) interface{} {
 			Name:       crons.Name,
 			Schedule:   crons.Spec.Schedule,
 			LinkFormat: getCronTabLinked(crons.Spec.Schedule),
+			Namespace:  crons.Namespace,
 		}
 		cronList = append(cronList, cronData)
 	}
 	log.Infof("Total cronjob collected: %d ", len(cronList))
 	return types.ServingData{
 		CronJobLists: cronList,
-		Namespace: namespace,
+		Namespace:    getScope(namespace),
 	}
 }
 
+func getScope(namespace string) string {
+	if scopeAvail {
+		return "all"
+	} else {
+		return namespace
+	}
+}
